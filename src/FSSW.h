@@ -42,6 +42,7 @@ class FSSW {
 
     ParameterReader *paraRdr;  // used to pass-in parameters
     int USE_OSCAR_FORMAT;
+    int USE_OSCAR2013;
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
     bool INCLUDE_SHEAR_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
@@ -160,6 +161,7 @@ class FSSW {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
+    void combine_samples_to_OSCAR2013();
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 

@@ -67,6 +67,7 @@ FSSW::FSSW(
     hydro_mode = paraRdr->getVal("hydro_mode");
 
     USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
+    USE_OSCAR2013 = paraRdr->getVal("use_OSCAR2013", 0);
     USE_GZIP_FORMAT = paraRdr->getVal("use_gzip_format");
     USE_BINARY_FORMAT = paraRdr->getVal("use_binary_format");
 
@@ -363,7 +364,11 @@ void FSSW::shell() {
     computeAvgTotalEnergyMomentum();
 
     if (USE_OSCAR_FORMAT) {
-        combine_samples_to_OSCAR();
+        if (USE_OSCAR2013) {
+            combine_samples_to_OSCAR2013();
+        } else {
+            combine_samples_to_OSCAR();
+        }
     } else if (USE_GZIP_FORMAT) {
         combine_samples_to_gzip_file();
     } else if (USE_BINARY_FORMAT) {
@@ -500,6 +505,62 @@ void FSSW::combine_samples_to_OSCAR() {
     cout << endl
          << " -- combine_samples_to_OSCAR samples finishes " << sw.takeTime()
          << " seconds." << endl;
+}
+
+void FSSW::combine_samples_to_OSCAR2013() {
+    Stopwatch sw;
+    sw.tic();
+    messager_.info(" -- Now combine sample files to OSCAR 2013 file...");
+
+    char line_buffer[500];
+
+    remove(OSCAR_output_filename_.c_str());
+    ofstream oscar(OSCAR_output_filename_.c_str());
+
+    oscar << "#!OSCAR2013 particle_lists t x y z mass p0 px py pz pdg ID charge"
+          << endl;
+    oscar << "# Units: fm fm fm fm GeV GeV GeV GeV GeV none none e" << endl;
+
+    particle_info *particle_info_local = &particles[0];
+    for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
+        int total_number_of_particles = (*Hadron_list)[iev]->size();
+        if (total_number_of_particles > 0) {
+            oscar << "# event " << iev + 1 << " out "
+                  << total_number_of_particles << endl;
+            for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
+                int pid_local = (*(*Hadron_list)[iev])[ipart].pid;
+                if (particle_info_local->monval != pid_local) {
+                    for (unsigned int ii = 0; ii < particles.size(); ii++) {
+                        if (particles[ii].monval == pid_local) {
+                            particle_info_local = &particles[ii];
+                            break;
+                        }
+                    }
+                }
+                snprintf(line_buffer, 500,
+                    "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %d  %d  %d",
+                    (*(*Hadron_list)[iev])[ipart].t,
+                    (*(*Hadron_list)[iev])[ipart].x,
+                    (*(*Hadron_list)[iev])[ipart].y,
+                    (*(*Hadron_list)[iev])[ipart].z,
+                    (*(*Hadron_list)[iev])[ipart].mass,
+                    (*(*Hadron_list)[iev])[ipart].E,
+                    (*(*Hadron_list)[iev])[ipart].px,
+                    (*(*Hadron_list)[iev])[ipart].py,
+                    (*(*Hadron_list)[iev])[ipart].pz,
+                    (*(*Hadron_list)[iev])[ipart].pid,
+                    ipart + 1,
+                    particle_info_local->charge);
+                oscar << line_buffer << endl;
+            }
+            oscar << "# event " << iev + 1 << " end 0 impact 0.000" << endl;
+        }
+    }
+
+    sw.toc();
+    cout << endl
+         << " -- combine_samples_to_OSCAR2013 samples finishes "
+         << sw.takeTime() << " seconds." << endl;
 }
 
 void FSSW::combine_samples_to_gzip_file() {
